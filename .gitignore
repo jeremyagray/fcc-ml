@@ -1,0 +1,8 @@
+# Emacs.
+*~
+
+# Python.
+*.pyc
+__pycache__
+cats_and_dogs
+cats_and_dogs.zip
