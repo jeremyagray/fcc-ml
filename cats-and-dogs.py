@@ -66,7 +66,6 @@ total_test = len(os.listdir(test_dir))
 
 # Variables for pre-processing and training.
 batch = 128
-epochs = 15
 height = 150
 width = 150
 dim = (height, width)
@@ -118,6 +117,80 @@ testing_data = \
 model = Sequential()
 model.add(keras.Input(shape=(height, width, 3)))
 
+# SVHN from paper. XX% correct.
+# model.add(Dropout(0.95))
+# model.add(Conv2D(96,
+#                  (5, 5),
+#                  activation='relu',
+#                  padding='same'))
+# model.add(MaxPooling2D((3, 3), (2, 2)))
+# model.add(Dropout(0.75))
+# model.add(Conv2D(128,
+#                  (5, 5),
+#                  activation='relu',
+#                  padding='same'))
+# model.add(MaxPooling2D((3, 3), (2, 2)))
+# model.add(Dropout(0.75))
+# model.add(Conv2D(128,
+#                  (5, 5),
+#                  activation='relu',
+#                  padding='same'))
+# model.add(MaxPooling2D((3, 3), (2, 2)))
+# model.add(Dropout(0.5))
+# model.add(Flatten())
+# model.add(Dense(2048, activation='relu'))
+# model.add(Dropout(0.5))
+# model.add(Dense(2048, activation='relu'))
+# model.add(Dropout(0.5))
+# model.add(Dense(1, activation='sigmoid'))
+# model.summary()
+
+# model.compile(metrics=['accuracy'],
+#               optimizer='rmsprop',
+#               loss='binary_crossentropy')
+
+# epochs = 15
+
+# 60% correct.
+# model.add(Dropout(0.5))
+# model.add(Conv2D(32,
+#                  (7, 7),
+#                  activation='relu',
+#                  padding='same'))
+# model.add(MaxPooling2D((2, 2)))
+# model.add(Dropout(0.5))
+# model.add(Conv2D(64,
+#                  (5, 5),
+#                  activation='relu',
+#                  padding='same'))
+# model.add(MaxPooling2D((2, 2)))
+# model.add(Dropout(0.5))
+# model.add(Conv2D(128,
+#                  (3, 3),
+#                  activation='relu',
+#                  padding='same'))
+# model.add(MaxPooling2D((2, 2)))
+# model.add(Dropout(0.5))
+# model.add(Conv2D(256,
+#                  (3, 3),
+#                  activation='relu',
+#                  padding='same'))
+# model.add(MaxPooling2D((2, 2)))
+# model.add(Dropout(0.5))
+# model.add(Flatten())
+# model.add(Dense(512, activation='relu'))
+# model.add(Dropout(0.50))
+# model.add(Dense(512, activation='relu'))
+# model.add(Dropout(0.50))
+# model.add(Dense(1, activation='sigmoid'))
+# model.summary()
+
+# model.compile(metrics=['accuracy'],
+#               optimizer='rmsprop',
+#               loss='binary_crossentropy')
+
+# epochs = 20
+
 # 76% correct.
 model.add(Conv2D(32, (3, 3), activation='relu'))
 model.add(MaxPooling2D((2, 2)))
@@ -128,14 +201,16 @@ model.add(MaxPooling2D((2, 2)))
 model.add(Conv2D(64, (3, 3), activation='relu'))
 model.add(MaxPooling2D((2, 2)))
 model.add(Flatten())
-model.add(Dense(64, activation='relu'))
+# model.add(Dense(64, activation='relu'))
+model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(1, activation='sigmoid'))
-model.summary()
 
 model.compile(metrics=['accuracy'],
               optimizer='rmsprop',
               loss='binary_crossentropy')
+
+epochs = 50
 
 # 66% correct.
 # model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
