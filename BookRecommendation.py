@@ -23,8 +23,8 @@ def load_data():
 
     if not (os.path.isfile(books) and os.path.isfile(ratings)):
         # Create the temporary directory if it does not exist.
-        if os.exists(tmp):
-            if not os.exists(tmpdir):
+        if os.path.exists(tmp):
+            if not os.path.exists(tmpdir):
                 os.makedirs(tmpdir)
 
         # Download and prepare data set.
