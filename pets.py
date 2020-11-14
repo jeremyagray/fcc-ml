@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from tensorflow.keras import layers
 from tensorflow.keras.layers.experimental import preprocessing
 import numpy as np
 import os

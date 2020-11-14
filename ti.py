@@ -6,7 +6,8 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.layers.experimental import preprocessing
 
-ti = pd.read_csv("https://storage.googleapis.com/tf-datasets/titanic/train.csv")
+ti = pd.read_csv("https://storage.googleapis.com/"
+                 "tf-datasets/titanic/train.csv")
 
 tif = ti.copy()
 til = tif.pop('survived')
@@ -48,7 +49,7 @@ ppic = layers.Concatenate()(ppi)
 tip = tf.keras.Model(inputs, ppic)
 # tf.keras.utils.plot_model(model=tip, rankdir='LR', dpi=72, show_shapes=True)
 
-tifd = {name: np.array(value) 
+tifd = {name: np.array(value)
         for name, value in tif.items()}
 
 # fd = {name: values[:1] for name, values in tifd.items()}
@@ -70,6 +71,7 @@ def ti_model(preprocessing_head, inputs):
                   metrics=['accuracy'])
 
     return model
+
 
 tim = ti_model(tip, inputs)
 

@@ -3,10 +3,10 @@
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.layers.experimental import preprocessing
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
+# import seaborn as sns
 import tensorflow as tf
 
 url = 'http://archive.ics.uci.edu/ml/machine-learning-databases/' \
@@ -157,6 +157,7 @@ def build_and_compile_model(norm):
                   optimizer=tf.keras.optimizers.Adam(0.001))
 
     return model
+
 
 # dhpm = build_and_compile_model(hpnorm)
 # dhpm.summary()
