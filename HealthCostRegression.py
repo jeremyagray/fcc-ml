@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 
-# from tensorflow import keras
-# import tensorflow_docs as tfdocs
-# import tensorflow_docs.modeling
-# import tensorflow_docs.plots
 from tensorflow.keras.layers.experimental import preprocessing
+# import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -16,13 +13,6 @@ import urllib
 
 # Download and load data.
 def load_data():
-    # Old way.  Fails.
-    # url = 'https://cdn.freecodecamp.org/'
-    # 'project-data/health-costs/insurance.csv'
-    # file = 'insurance.csv'
-    # dataset = keras.utils.get_file(file, url)
-
-    # Improved way.
     # Temporary directory paths.
     tmp = '/home/gray/tmp'
     directory = 'fcc-ml'
@@ -38,7 +28,8 @@ def load_data():
                 os.makedirs(tmpdir)
 
         # Data set URL.
-        url = 'https://cdn.freecodecamp.org/project-data/health-costs/insurance.csv'
+        url = 'https://cdn.freecodecamp.org/project-data/'\
+            'health-costs/insurance.csv'
 
         # Make a good fake request for the CDN.
         req = urllib.request.Request(url,
@@ -54,21 +45,17 @@ def load_data():
     return costs
 
 
-# Create the regression model.
-def create_model():
-    pass
-
-
 # Test model by checking how well the model generalizes using the test set.
-def test_predictions(model, data, labels):
-    loss, mae, mse = model.evaluate(data, labels, verbose=2)
+def test_predictions(model, dataset):
+    loss, mae, mse = model.evaluate(dataset, verbose=2)
 
-    print("Testing set Mean Abs Error: {:5.2f} expenses".format(mae))
+    print("Testing set Mean Abs Error: {:9,.2f} expenses".format(mae))
 
     if mae < 3500:
         print("You passed the challenge.  Great job!")
     else:
-        print("The mean absolute error must be less than $3,500.  Keep trying.")
+        print("The mean absolute error must be less than $3,500.  "
+              "Keep trying.")
 
 
 # Plot predictions.
@@ -104,76 +91,60 @@ def df_to_ds(df, target, shuffle=True, batch=32):
     return ds
 
 
-# Normalize the numeric inputs.
-def get_normalization_layer(frame, features):
-    inputs = {}
-
-    for feature in features:
-        inputs[feature] = tf.keras.Input(shape=(1,),
-                                        name=feature,
-                                        dtype=tf.float32)
-
-    # Concatenate the numeric inputs.
-    x = tf.keras.layers.Concatenate()(list(inputs.values()))
-
-    # Initialize and adapt the normalization layer.
+def get_normalization_layer(dataset, feature):
+    # Create a Normalization layer for our feature.
     normalizer = preprocessing.Normalization()
-    normalizer.adapt(np.array(frame[inputs.keys()]))
 
-    return normalizer(x)
+    # Prepare a Dataset that only yields our feature.
+    feature_ds = dataset.map(lambda x, y: x[feature])
 
+    # Learn the statistics of the data.
+    normalizer.adapt(feature_ds)
 
-# Encode the categorical inputs.
-def get_categorical_layer(frame, features):
-    inputs = []
-
-    for feature in features:
-        input = tf.keras.Input(shape=(1,),
-                               name=feature,
-                               dtype=tf.string)
-
-        lookup = preprocessing.StringLookup(
-            vocabulary=np.unique(frame[feature]))
-        one_hot = preprocessing.CategoryEncoding(
-            max_tokens=lookup.vocab_size())
-
-        x = lookup(input)
-        x = one_hot(x)
-        inputs.append(x)
-
-    # return tf.keras.layers.Concatenate()(inputs)
-    return inputs
+    return normalizer
 
 
-def get_catint_layer():
-    pass
-
-
-def get_category_encoding_layer(name, dataset, dtype, max_tokens=None):
-    # Create a StringLookup layer which will turn strings into integer indices
+def get_category_encoding_layer(dataset, feature, dtype, max_tokens=None):
+    # Create a StringLookup layer which will turn strings into integer
+    # indices.
     if dtype == 'string':
         index = preprocessing.StringLookup(max_tokens=max_tokens)
     else:
         index = preprocessing.IntegerLookup(max_values=max_tokens)
 
-    # Prepare a Dataset that only yields our feature
-    feature_ds = dataset.map(lambda x, y: x[name])
+    # Prepare a dataset that only yields our feature.
+    feature_ds = dataset.map(lambda x, y: x[feature])
 
     # Learn the set of possible values and assign them a fixed integer index.
     index.adapt(feature_ds)
 
-    # Create a Discretization for our integer indices.
+    # Create a discretization for our integer indices.
     encoder = preprocessing.CategoryEncoding(max_tokens=index.vocab_size())
 
-    # Prepare a Dataset that only yields our feature.
+    # Prepare a dataset that only yields our feature.
     feature_ds = feature_ds.map(index)
 
     # Learn the space of possible indices.
     encoder.adapt(feature_ds)
 
-    # Apply one-hot encoding to our indices. The lambda function captures the
-    # layer so we can use them, or include them in the functional model later.
-    return lambda feature: encoder(index(feature))
+    # Apply one-hot encoding to our indices. The lambda function
+    # captures the layer so we can use them, or include them in the
+    # functional model later.
+    return lambda x: encoder(index(x))
+
+
+# Create and save training and validation loss versus epoch plot.
+def plot_losses(epochs, train, val, file='loss.png'):
+    fig = plt.figure(figsize=(8, 8))
+
+    ax = plt.subplot(1, 2, 1)
+    ax.plot(range(epochs), train, label='Training Loss')
+    ax.plot(range(epochs), val, label='Validation Loss')
+    ax.legend(loc='upper right')
+    ax.set_title('Training and Validation Loss')
+    fig.savefig(file)
+
+    return
 
 
 if __name__ == '__main__':
@@ -211,159 +182,111 @@ if __name__ == '__main__':
     train_ds = df_to_ds(train_d, 'expenses', shuffle=True, batch=256)
     val_ds = df_to_ds(val_d, 'expenses', shuffle=False, batch=256)
     test_ds = df_to_ds(test_d, 'expenses', shuffle=False, batch=256)
-    # print(train_ds)
-    # name = 'bmi'
-    # feature_ds = train_ds.map(lambda x, y: x[name])
-    # print(feature_ds)
-    # exit()
 
-    # Instantiate tensors for each input with tf.keras.Input().
+    # Build model.
+
     # Numeric features:  age, bmi, children.
-    # numerics = ['age', 'bmi', 'children']
-    numerics = ['bmi', 'children']
+    numerics = ['age', 'bmi', 'children']
+    # numerics = ['bmi', 'children']
+    # numerics = ['bmi']
     # Categorical features:  sex, smoker, region.
     categoricals = ['sex', 'smoker', 'region']
+    # categoricals = ['sex', 'smoker']
+    # categoricals = ['smoker']
     # Categorical features as integers:  age.  Maybe?
-    cat_integers = ['age']
+    # categorical_integers = ['age']
+    categorical_integers = []
 
-    inputs = {}
+    inputs = []
+    encodeds = []
 
-    # print(list(train_f.items()))
-
-    for name, column in train_f.items():
-        dtype = ''
-        if name in numerics:
-            dtype = tf.float32
-        elif name in categoricals:
-            dtype = tf.string
-        elif name in cat_integers:
-            dtype = tf.int64
-        else:
-            raise ValueError('{} is an unrecognized feature name.'.format(name))
-
-        inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
-
-    print(inputs)
-
-    # Normalize the numeric inputs.
-
-    # Dictionary of numeric inputs.
-    numeric_inputs = {name: input for name, input in inputs.items()
-                      if input.dtype == tf.float32}
-
-    # Concatenate the numeric inputs.
-    x = tf.keras.layers.Concatenate()(list(numeric_inputs.values()))
-
-    # Initialize and adapt the normalization layer.
-    normalizer = preprocessing.Normalization()
-    normalizer.adapt(np.array(train_f[numeric_inputs.keys()]))
-
-    # Normalize the numeric inputs.
-    all_numeric_inputs = normalizer(x)
-
-    print(all_numeric_inputs)
-
-    processed_inputs = [all_numeric_inputs]
+    # Numeric features.
+    for feature in numerics:
+        input = tf.keras.Input(shape=(1,), name=feature)
+        normalization = get_normalization_layer(train_ds, feature)
+        encoded = normalization(input)
+        inputs.append(input)
+        encodeds.append(encoded)
 
     # Categorical features encoded as integers.
-    age_col = tf.keras.Input(shape=(1,), name='age', dtype='int64')
-    encoding_layer = get_category_encoding_layer('age',
-                                                 train_ds,
-                                                 dtype='int64',
-                                                 max_tokens=5)
-    encoded_age_col = encoding_layer(age_col)
-    # processed_inputs.append(age_col)
-    processed_inputs.append(encoded_age_col)
+    for feature in categorical_integers:
+        input = tf.keras.Input(shape=(1,), name=feature, dtype='int64')
+        encoding = get_category_encoding_layer(train_ds,
+                                               feature,
+                                               dtype='int64',
+                                               max_tokens=5)
+        encoded = encoding(input)
+        inputs.append(input)
+        encodeds.append(encoded)
 
-    # Encode the categorical inputs.
+    # Categorical features encoded as strings.
+    for feature in categoricals:
+        input = tf.keras.Input(shape=(1,), name=feature, dtype='string')
+        encoding = get_category_encoding_layer(train_ds,
+                                               feature,
+                                               dtype='string',
+                                               max_tokens=5)
+        encoded = encoding(input)
+        inputs.append(input)
+        encodeds.append(encoded)
 
-    for name, input in inputs.items():
-        if ((input.dtype == tf.float32) or (input.dtype == tf.int64)):
-            continue
-
-        lookup = preprocessing.StringLookup(
-            vocabulary=np.unique(train_f[name]))
-        one_hot = preprocessing.CategoryEncoding(
-            max_tokens=lookup.vocab_size())
-
-        x = lookup(input)
-        x = one_hot(x)
-        processed_inputs.append(x)
-
-    processed_input_layers = tf.keras.layers.Concatenate()(processed_inputs)
-
-    # processing_model = tf.keras.Model(inputs, processed_input_layers)
-
-    # tf.keras.utils.plot_model(model=processing_model,
-    #                           rankdir="LR",
-    #                           dpi=72,
-    #                           show_shapes=True)
-
-    output = tf.keras.layers\
-                     .Dense(64, activation='relu')(processed_input_layers)
-    output = tf.keras.layers\
-                     .Dense(64, activation='relu')(output)
-    output = tf.keras.layers.Dense(1)(output)
+    encoded_layers = tf.keras.layers.concatenate(encodeds)
+    x = tf.keras.layers.Dense(4096, activation='relu')(encoded_layers)
+    x = tf.keras.layers.Dropout(0.6)(x)
+    x = tf.keras.layers.Dense(2048, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(1024, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(512, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(256, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(128, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(64, activation='relu')(x)
+    # x = tf.keras.layers.Dropout(0.4)(x)
+    output = tf.keras.layers.Dense(1)(x)
     model = tf.keras.Model(inputs, output)
-
-    model.compile(optimizer=tf.optimizers.Adam(),
-                  loss=tf.losses.BinaryCrossentropy(from_logits=True),
-                  metrics=['mae', 'acc'])
-
-    model.fit(train_ds,
-              validation_data=val_ds,
-              epochs=25)
-
-    loss, mae, mse = model.evaluate(test_ds)
-    print(loss, mae, mse)
+    model.compile(optimizer='adam',
+                  loss=tf.keras.losses.MeanAbsoluteError(),
+                  metrics=['mae', 'mse'])
 
     tf.keras.utils.plot_model(model=model,
                               rankdir="LR",
                               dpi=72,
                               show_shapes=True)
 
-    # train_fd = {name: np.array(value)
-    #             for name, value in train_feat.items()}
+    epochs = 30
+    history = model.fit(train_ds,
+                        validation_data=val_ds,
+                        epochs=epochs)
 
-    # def train_model(preprocessing_head, inputs):
-    #     body = tf.keras.Sequential([
-    #         tf.keras.layers.Dense(64),
-    #         tf.keras.layers.Dense(1)
-    #     ])
+    # Plot the losses.
+    plot_losses(epochs, history.history['loss'], history.history['val_loss'])
 
-    #     preprocessed_inputs = preprocessing_head(inputs)
-    #     result = body(preprocessed_inputs)
-    #     model = tf.keras.Model(inputs, result)
+    test_predictions(model, test_ds)
 
-    #     model.compile(loss=tf.losses.BinaryCrossentropy(from_logits=True),
-    #                   optimizer=tf.optimizers.Adam())
+    # print(model.evaluate(test_ds, return_dict=True))
+    # print(model.metrics_names)
+    # loss, mae, mse = model.evaluate(test_ds)
+    # print('loss:  {}\nmae:  {}\nmse:  {}'.format(loss, mae, mse))
 
-    #     return model
+    # print(model.predict(test_ds))
+    # actual = ''
+    # for x, y in test_ds:
+    #     actual = y.numpy().tolist()
 
-    # train_model = train_model(train_pp, inputs)
+    # predicted = model.predict(test_ds)
+    # actual = [y for x, y in test_ds]
+    # print(actual)
 
-    # train_model.fit(train_fd,
-    #                 train_labels,
-    #                 validation_split=0.2,
-    #                 epochs=10)
+    # error = 0
+    # num = 0
 
-    # test_results = {}
-    # test_results['dnn_model'] = train_model.evaluate(
-    #     test_data, test_labels, verbose=0)
-    # print(test_results)
+    # for i, item in enumerate(actual):
+    #     print('actual:  ${:9,.2f} '\
+    #           'predicted:  ${:9,.2f}'.format(item, predicted[i][0]))
+    #     error += math.fabs(item - predicted[i][0])
+    #     num = i
 
-    # test_feat = test_data.copy()
-    # test_fd = {name: np.array(value)
-    #             for name, value in test_feat.items()}
-
-    # print(train_model.evaluate(test_fd, test_labels, verbose=2))
-    # print(train_model.predict(test_fd))
-
-    # Create model.
-    # model = create_model()
-    # Train model.
-    # model.train()
-    # Test model.
-    # test_predictions(model, test_data, test_labels)
-    # Plot predictions of model.
-    # plot_predictions(model, test_data, test_labels)
+    # print('error:  {}'.format(error / num))
